@@ -19,6 +19,8 @@ type
 	IdGeneratorType int8
 	DataObject map[string]interface{}
 	DataObjectResp bson.D
+	AttributeType int8
+	 
 )
 
 type Entry struct {
@@ -233,6 +235,8 @@ func ParseIdGeneratorType(i int8) IdGeneratorType {
 		return IdGeneratorTypeUnknown
 	}
 }
+ 
+
 //DataObject
 func (do *DataObject) Put(key string, value interface{})  {
 	v:=map[string]interface{}(*do)
@@ -249,6 +253,14 @@ func (do *DataObjectResp) Get(key string) (interface{},bool) {
 	
 	value,ok:=v.Map()[key]
 	return value,ok
+}
+func (do *DataObjectResp) ToJson() (string,error)   {
+
+	json,err:=bson.MarshalExtJSON(&do,true,true)
+	if err!=nil {
+		return "",err
+	}
+	return string(json),nil
 }
 	
 	 
@@ -268,14 +280,7 @@ type MetaTable struct {
 	PrimaryKey    *PrimaryKey
 	RelationShips []*RelationShip
 	Indexes       []*MetaIndex
-	//createAt
-	CreateAt time.Time
-	//updateAt
-	UpdateAt time.Time
-	//createBy
-	CreateBy *primitive.ObjectID
-	//updateBy
-	UpdateBy *primitive.ObjectID
+	Tracker
 	
 }
 type MetaColumn struct {
@@ -288,9 +293,8 @@ type MetaColumn struct {
 	Validators   []string
 	IsNestable   bool
 	IsArray	  	 bool
-	IsSerachable bool
-	InputType    InputType
 	NestedColumns []*MetaColumn
+	Attributes   []*Attribute
 }
 type PrimaryKey struct {
 	Name string
@@ -387,3 +391,36 @@ func ParseID(id interface{}) ID {
 	}
 }
 
+type Attribute struct {
+	Name string
+	Type AttributeType
+	Value interface{}
+	DataType DataType
+}
+
+const (
+	AttributeTypeUnknown AttributeType = iota
+	AttributeTypeInputType
+	AttributeTypeNormal
+)
+type Dictionary struct {
+	Id            primitive.ObjectID `bson:"_id,omitempty"`
+	Name          string
+	Group 	   	  string
+	DataType	  DataType
+	IsArray		  bool
+	Value interface{}
+	Description   string
+	Tracker
+}
+
+type Tracker struct {
+	//createAt
+	CreateAt time.Time
+	//updateAt
+	UpdateAt time.Time
+	//createBy
+	CreateBy *primitive.ObjectID
+	//updateBy
+	UpdateBy *primitive.ObjectID
+}

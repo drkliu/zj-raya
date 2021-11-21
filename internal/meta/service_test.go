@@ -1,15 +1,17 @@
 package meta_test
 
 import (
+ 
 	"context"
 	"encoding/json"
 	"log"
 	"testing"
 
 	"github.com/drkliu/zj-raya/internal/meta"
- 
+
 	"github.com/stretchr/testify/assert"
 
+	 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -473,8 +475,8 @@ func TestInsertOne(t *testing.T) {
 	
 	product:=meta.DataObject{}
  
-	err=json.Unmarshal([]byte(`{
-		"name":"Apple iPhone 13",
+	err=json.Unmarshal([]byte(`{ 
+		"name":"Apple iPhone 17",
 		"shortDescription":"Apple iPhone 13 (A2634) 128GB 午夜色 支持移动联通电信5G 双卡双待手机",
 		"longDescription": "品牌： Apple商品名称：AppleiPhone 13商品编号：100026667880商品毛重：320.00g商品产地：中国大陆运行内存：其他机身存储：128GB摄像头数量：后置双摄分辨率：其他屏幕比例：其他屏幕前摄组合：其他充电器：其他扬声器：立体声系统：iOS功能：超大字体，SOS功能，语音命令，语音识别(文字语音互转)支持IPv6：支持IPv6",
 		"brand":{
@@ -536,28 +538,7 @@ func TestInsertOne(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//map to data object
-	// product:=meta.MapToDataObject(&p)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// product.Put("name","Apple iPhone 13")
-	// product.Put("shortDescription","Apple iPhone 13 (A2634) 128GB 午夜色 支持移动联通电信5G 双卡双待手机")
-	// product.Put("longDescription",`品牌： Apple
-	// 商品名称：AppleiPhone 13商品编号：100026667880商品毛重：320.00g商品产地：中国大陆运行内存：其他机身存储：128GB摄像头数量：后置双摄分辨率：其他屏幕比例：其他屏幕前摄组合：其他充电器：其他扬声器：立体声系统：iOS功能：超大字体，SOS功能，语音命令，语音识别(文字语音互转)支持IPv6：支持IPv6`)
-	// product.Put("price",1299.00)
-	// product.Put("brand",`{name:"Apple",icon:"https://img10.360buyimg.com/n9/s40x40_jfs/t1/90633/7/18242/187090/614be619E71982212/ee282423ecdc028c.jpg"}`)
-	// product.Put("medias",`
-	// 	[{
-	// 		name:"Apple iPhone 13",
-	// 		url:"https://img10.360buyimg.com/n1/s450x450_jfs/t1/85203/17/16688/176934/614be5bfE28ca6187/6699eda01a9871e3.jpg"
-	// 	}]
-	// `)
-	// product.Put("price",`{
-	// 	currency:"CNY",
-	// 	amount:1299.00
-	// }`)
-	//insert one
+	 
 	 
 	id, err := metaService.InsertOne(productMetaTable,  &product)
 	if err != nil {
@@ -683,14 +664,9 @@ func TestMetaServiceFindAll(t *testing.T) {
 		log.Fatal(err)
 	}
 	//find all
-	products, err := metaService.FindAll(productMetaTable)
+	json, err := metaService.FindAllToJson(productMetaTable)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("findAll:", products)
-	// assert.Equal(t, 4, len(products))
-	// product0,e := products[0].Get("name")
-	// assert.Equal(t, true, e)
-	// assert.Equal(t, "Apple iPhone 13", product0)
-	t.Errorf("%v",products[0])
+	t.Errorf("%s",json)
 }
