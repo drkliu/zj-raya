@@ -2,7 +2,8 @@ package meta
 
 import (
 	"context"
-	 
+	"errors"
+
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -66,7 +67,7 @@ func (r *repository) FindAllMetaTables() ([]*MetaTable, error) {
 	for cursor.Next(ctx) {
 		var table MetaTable
 		err := cursor.Decode(&table)
-		 
+
 		if err != nil {
 			return nil, err
 		}
@@ -90,8 +91,8 @@ func (r *repository) InsertManyMetaTables(tables []*MetaTable) ([]*ID, error) {
 	//convert to bson.D
 	var bsonTables []interface{}
 	for _, table := range tables {
-		table.CreateAt=time.Now()
-		table.UpdateAt=time.Now()
+		table.CreateAt = time.Now()
+		table.UpdateAt = time.Now()
 		bsonTables = append(bsonTables, table)
 	}
 	result, err := coll.InsertMany(context.TODO(), bsonTables)
@@ -107,7 +108,7 @@ func (r *repository) InsertManyMetaTables(tables []*MetaTable) ([]*ID, error) {
 	return ids, nil
 }
 func (r *repository) FindAll(table *MetaTable) ([]*DataObjectResp, error) {
-	 
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	db := mongo.Database(*r.db)
@@ -116,18 +117,18 @@ func (r *repository) FindAll(table *MetaTable) ([]*DataObjectResp, error) {
 	if err != nil {
 		return nil, err
 	}
-	result:=[]*DataObjectResp{}
+	result := []*DataObjectResp{}
 	for cursor.Next(ctx) {
 		var dor DataObjectResp
 		//var v interface{}
 		//var v interface{}
 		err := cursor.Decode(&dor)
 		// for _, c := range table.Columns {
-			
+
 		// 	if _,e:=dor.Get(c.Name); e{
 		// 		result=append(result, &dor)
 		// 	    continue
-				 
+
 		// 	}
 		// }
 		if err != nil {
@@ -137,6 +138,7 @@ func (r *repository) FindAll(table *MetaTable) ([]*DataObjectResp, error) {
 	}
 	return result, nil
 }
+
 //column value to Entry
 // func columnValueToEntryValue(column *MetaColumn, value interface{}, entry interface{}) {
 // 	if len(column.NestedColumns)>0{
@@ -150,12 +152,12 @@ func (r *repository) FindAll(table *MetaTable) ([]*DataObjectResp, error) {
 // 						*entries=append(*entries, Entry{Key:nc.Name,Value:es})
 // 						columnValueToEntryValue(nc,v,&es)
 // 					}else{
-						
+
 // 						*entries=append(*entries, Entry{Key:nc.Name,Value:v})
 // 					}
 // 				}
 // 			}
-// 		default:	
+// 		default:
 // 			*entries=append(*entries, Entry{Key:column.Name,Value:value})
 // 		}
 // 	}
@@ -173,11 +175,14 @@ func (r *repository) FindOne(table *MetaTable, id ID) (*DataObjectResp, error) {
 func (r *repository) InsertOne(table *MetaTable, do *DataObject) (*ID, error) {
 	db := mongo.Database(*r.db)
 	coll := db.Collection(table.Name)
-    insertDocument:=bson.D{}
+	insertDocument := bson.D{}
 	for _, c := range table.Columns {
-		if e,exist:=do.Get(c.Name); exist{
-			v:=assemblyNestedColumns(c,e)
-			insertDocument=append(insertDocument, bson.E{Key:c.Name, Value:v})
+		if e, exist := do.Get(c.Name); exist {
+			v, err := assemblyNestedColumns(c, e)
+			if err != nil {
+				return nil, err
+			}
+			insertDocument = append(insertDocument, bson.E{Key: c.Name, Value: v})
 		}
 	}
 	result, err := coll.InsertOne(context.TODO(), insertDocument)
@@ -188,45 +193,102 @@ func (r *repository) InsertOne(table *MetaTable, do *DataObject) (*ID, error) {
 	return &id, nil
 }
 
-func assemblyNestedColumns(c *MetaColumn, val interface{}) interface{} {
-	 
-		
-	switch val:=val.(type) {
-	case map[string]interface{}:
-		b:=bson.D{}
-		for _,nc:=range c.NestedColumns{
-			if v,e:=val[nc.Name]; e{
-				if len(nc.NestedColumns)>0{
-					b=append(b,bson.E{Key: nc.Name,Value: assemblyNestedColumns(nc,v)})
-				}else{
-					b=append(b, bson.E{Key:nc.Name, Value:v})
-				}
-			}
-		}
-		return b
-	case []interface{}:
-		var ds []bson.D
-		for _,vi:=range val{
-			d:=bson.D{}
-			for _,nc:=range c.NestedColumns{
-				if vm,e:=vi.(map[string]interface{}); e{
-					if v,e:=vm[nc.Name]; e{
-						if len(nc.NestedColumns)>0{
-							d=append(d,bson.E{Key: nc.Name,Value: assemblyNestedColumns(nc,v)})
-						}else{
-							d=append(d, bson.E{Key:nc.Name, Value:v})
+func assemblyNestedColumns(c *MetaColumn, val interface{}) (interface{}, error) {
+	switch c.DataType {
+	case DataTypeJson:
+		switch c.IsArray {
+		case false:
+			if val, ok := val.(map[string]interface{}); ok {
+				b := bson.D{}
+				for _, nc := range c.NestedColumns {
+					if v, e := val[nc.Name]; e {
+						if len(nc.NestedColumns) > 0 {
+							ncv, err := assemblyNestedColumns(nc, v)
+							if err != nil {
+								return nil, err
+							}
+							b = append(b, bson.E{Key: nc.Name, Value: ncv})
+						} else {
+							b = append(b, bson.E{Key: nc.Name, Value: v})
 						}
 					}
 				}
+				return b, nil
 			}
-			if len(d)>0{
-				ds=append(ds, d)
+			return nil, errors.New("column:" + c.Name + ",value is not map[string]interface{}")
+		default:
+			var ds []bson.D
+			if val, ok := val.([]interface{}); ok {
+				for _, vi := range val {
+					d := bson.D{}
+					for _, nc := range c.NestedColumns {
+						if vm, e := vi.(map[string]interface{}); e {
+							if v, e := vm[nc.Name]; e {
+								if len(nc.NestedColumns) > 0 {
+									ncv, err := assemblyNestedColumns(nc, v)
+									if err != nil {
+										return nil, err
+									}
+									d = append(d, bson.E{Key: nc.Name, Value: ncv})
+								} else {
+									d = append(d, bson.E{Key: nc.Name, Value: v})
+								}
+							}
+						}
+					}
+					if len(d) > 0 {
+						ds = append(ds, d)
+					}
+				}
+				return ds, nil
 			}
+			return nil, errors.New("column:" + c.Name + ",value is not []interface{}")
 		}
-		return ds
 	default:
-		return val
+		switch v := val.(type) {
+		case map[string]interface{}, []interface{}:
+			return v, errors.New("column:" + c.Name + ",value should not be a map[string]interface{} or []interface{}")
+		default:
+			return v, nil
+		}
 	}
+
+	// switch val:=val.(type) {
+	// case map[string]interface{}:
+	// 	b:=bson.D{}
+	// 	for _,nc:=range c.NestedColumns{
+	// 		if v,e:=val[nc.Name]; e{
+	// 			if len(nc.NestedColumns)>0{
+	// 				b=append(b,bson.E{Key: nc.Name,Value: assemblyNestedColumns(nc,v)})
+	// 			}else{
+	// 				b=append(b, bson.E{Key:nc.Name, Value:v})
+	// 			}
+	// 		}
+	// 	}
+	// 	return b
+	// case []interface{}:
+	// 	var ds []bson.D
+	// 	for _,vi:=range val{
+	// 		d:=bson.D{}
+	// 		for _,nc:=range c.NestedColumns{
+	// 			if vm,e:=vi.(map[string]interface{}); e{
+	// 				if v,e:=vm[nc.Name]; e{
+	// 					if len(nc.NestedColumns)>0{
+	// 						d=append(d,bson.E{Key: nc.Name,Value: assemblyNestedColumns(nc,v)})
+	// 					}else{
+	// 						d=append(d, bson.E{Key:nc.Name, Value:v})
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		if len(d)>0{
+	// 			ds=append(ds, d)
+	// 		}
+	// 	}
+	// 	return ds
+	// default:
+	// 	return val
+	// }
 }
 func (r *repository) InsertMany(table *MetaTable, values []*DataObject) ([]*ID, error) {
 	db := mongo.Database(*r.db)

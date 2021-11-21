@@ -204,7 +204,7 @@ var productMetaTable = meta.MetaTable{
 		},
 		{
 			Name:       "price",
-			DataType:   meta.DataTypeObject,
+			DataType:   meta.DataTypeJson,
 			IsNestable: true,
 			NestedColumns: []*meta.MetaColumn{
 				{
@@ -318,7 +318,7 @@ var cartsMetaTable = meta.MetaTable{
 				},
 				{
 					Name:     "price",
-					DataType: meta.DataTypeObject,
+					DataType: meta.DataTypeJson,
 					NestedColumns: []*meta.MetaColumn{
 						{
 							Name:     "currency",
@@ -347,7 +347,7 @@ var cartsMetaTable = meta.MetaTable{
 						},
 						{
 							Name:     "price",
-							DataType: meta.DataTypeObject,
+							DataType: meta.DataTypeJson,
 							NestedColumns: []*meta.MetaColumn{
 								{
 									Name:     "currency",
@@ -585,11 +585,11 @@ func TestInsertCarts(t *testing.T) {
 	cartMetaTable,err:=metaService.FindMetaTableByName("carts")
 	if err != nil {
 		log.Fatal(err)
-	}
+	}  
 	
 	cart:=meta.DataObject{}
 	err=json.Unmarshal([]byte(`{
-		"userId":"5c3c8f8f9f8f8e2c6a0a0a0a",
+		"userId":"5c3c8f8f9f8f8e2c6a0a0a01",
 		"cartItems":[
 			{
 				"productId":"5c3c8f8f9f8f8e2c6a0a0a0a",
