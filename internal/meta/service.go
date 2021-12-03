@@ -2,7 +2,7 @@ package meta
 
 import (
 	"bytes"
- 
+	"time"
 )
 
 type MetaService interface {
@@ -19,26 +19,59 @@ func NewService(repository *Repository) MetaService {
 	}
 }
 func (s *service) FindAllToJson(table *MetaTable) (string, error) {
-	dors,err:=s.FindAll(table)
-	if err!=nil{
-		return "",err
+	dors, err := s.FindAll(table)
+	if err != nil {
+		return "", err
 	}
 	return ToJson(dors)
 }
-func ToJson(dors []*DataObjectResp) (string,error) {
-	var buf bytes.Buffer
+
+func (s *service) InsertMetaTable(table *MetaTable) (*ID, error) {
+	if len(table.ModelName) == 0 {
+		table.ModelName = table.Name
+	}
+	setTrack(table, nil)
+	return s.Repository.InsertMetaTable(table)
+}
+
+func (s *service) InsertManyMetaTables(tables []*MetaTable) ([]*ID, error) {
+	for _, table := range tables {
+		if len(table.ModelName) == 0 {
+			table.ModelName = table.Name
+		}
+		setTrack(table, nil)
+	}
+	return s.Repository.InsertManyMetaTables(tables)
+}
+
+func (s *service) InsertMany(table *MetaTable, values []*DataObject) ([]*ID, error) {
+	// for _, value := range values {
+	// 	setTrack(table,nil)
+	// }
 	
+	return s.Repository.InsertMany(table, values)
+}
+func setTrack(table *MetaTable, updateBy *ID) {
+	table.CreatedAt = time.Now()
+	table.UpdatedAt = time.Now()
+	table.CreatedBy = updateBy
+	table.UpdatedBy = updateBy
+}
+
+func ToJson(dors []*DataObjectResp) (string, error) {
+	var buf bytes.Buffer
+
 	buf.WriteString("[")
 	for i, product := range dors {
-		j,err:=product.ToJson()
+		j, err := product.ToJson()
 		if err != nil {
-			return "",err
+			return "", err
 		}
-		if i>0{
+		if i > 0 {
 			buf.WriteString(",")
 		}
 		buf.WriteString(string(j))
 	}
 	buf.WriteString("]")
-	return buf.String(),nil
+	return buf.String(), nil
 }

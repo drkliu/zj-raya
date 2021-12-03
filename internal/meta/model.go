@@ -9,25 +9,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type 
-(
-	DataType int8
-	ID primitive.ObjectID
-	Database mongo.Database
-	InputType int8
+type (
+	DataType         int8
+	ID               primitive.ObjectID
+	Database         mongo.Database
+	InputType        int8
 	RelationShipType int8
-	IdGeneratorType int8
-	DataObject map[string]interface{}
-	DataObjectResp bson.D
-	AttributeType int8
-	 
+	IdGeneratorType  int8
+	DataObject       map[string]interface{}
+	DataObjectResp   bson.D
+	AttributeType    int8
 )
 
 type Entry struct {
-	Key string
+	Key   string
 	Value interface{}
 }
- 
+
 const (
 	DataTypeUnknown DataType = iota
 	DataTypeString
@@ -119,7 +117,6 @@ func ParseDataType(i int8) DataType {
 	}
 }
 
-
 const (
 	InputTypeUnknown InputType = iota
 	InputTypeText
@@ -193,6 +190,7 @@ func ParseInputType(i int8) InputType {
 		return InputTypeUnknown
 	}
 }
+
 const (
 	IdGeneratorTypeUnknown IdGeneratorType = iota
 	IdGeneratorTypeUUID
@@ -201,6 +199,7 @@ const (
 	//auto increment
 	IdGeneratorTypeAutoIncrement
 )
+
 //IdGeneratorType string
 func (id IdGeneratorType) String() string {
 	switch id {
@@ -218,6 +217,7 @@ func (id IdGeneratorType) String() string {
 		return "unknown"
 	}
 }
+
 //IdGeneratorType parse
 func ParseIdGeneratorType(i int8) IdGeneratorType {
 	switch i {
@@ -235,40 +235,39 @@ func ParseIdGeneratorType(i int8) IdGeneratorType {
 		return IdGeneratorTypeUnknown
 	}
 }
- 
 
 //DataObject
-func (do *DataObject) Put(key string, value interface{})  {
-	v:=map[string]interface{}(*do)
-	v[key]=value
+func (do *DataObject) Put(key string, value interface{}) {
+	v := map[string]interface{}(*do)
+	v[key] = value
 }
-func (do *DataObject) Get(key string) (interface{},bool) {
-	v:=map[string]interface{}(*do)
-	val,ok:=v[key]
-	return val,ok
+func (do *DataObject) Get(key string) (interface{}, bool) {
+	v := map[string]interface{}(*do)
+	val, ok := v[key]
+	return val, ok
 }
-//dataObjectResp get
-func (do *DataObjectResp) Get(key string) (interface{},bool) {
-	v:=bson.D(*do)
-	
-	value,ok:=v.Map()[key]
-	return value,ok
-}
-func (do *DataObjectResp) ToJson() (string,error)   {
 
-	json,err:=bson.MarshalExtJSON(&do,true,true)
-	if err!=nil {
-		return "",err
-	}
-	return string(json),nil
+//dataObjectResp get
+func (do *DataObjectResp) Get(key string) (interface{}, bool) {
+	v := bson.D(*do)
+
+	value, ok := v.Map()[key]
+	return value, ok
 }
-	
-	 
+func (do *DataObjectResp) ToJson() (string, error) {
+
+	json, err := bson.MarshalExtJSON(&do, true, true)
+	if err != nil {
+		return "", err
+	}
+	return string(json), nil
+}
+
 //map to DataObject
 func MapToDataObject(m *map[string]interface{}) *DataObject {
 	var do DataObject
-	for k,v := range *m {
-		do.Put(k,v)
+	for k, v := range *m {
+		do.Put(k, v)
 	}
 	return &do
 }
@@ -276,40 +275,44 @@ func MapToDataObject(m *map[string]interface{}) *DataObject {
 type MetaTable struct {
 	Id            primitive.ObjectID `bson:"_id,omitempty"`
 	Name          string
+	ModelName     string //used to real table name,for multi model in one table(such as product model)
+	Description   string
 	Columns       []*MetaColumn
 	PrimaryKey    *PrimaryKey
 	RelationShips []*RelationShip
 	Indexes       []*MetaIndex
-	Tracker
-	
+	Track
 }
 type MetaColumn struct {
-	Name         string
-	DataType     DataType
-	Length       int
-	Precision    int
-	Scale        int
-	IsNullable   bool
-	Validators   []string
-	IsNestable   bool
-	IsArray	  	 bool
+	Name          string
+	Description   string
+	DataType      DataType
+	Length        int
+	Precision     int
+	Scale         int
+	IsNullable    bool
+	Validators    []string
+	IsNestable    bool
+	IsArray       bool
+	DefaultValue  interface{}
 	NestedColumns []*MetaColumn
-	Attributes   []*Attribute
+	Attributes    []*Attribute
 }
 type PrimaryKey struct {
-	Name string
-	ColumnNames []string
+	Name            string
+	ColumnNames     []string
 	IdGeneratorType IdGeneratorType
 }
 type IdGenerator struct {
-	Type IdGeneratorType
+	Type   IdGeneratorType
 	Config string
 }
+
 //Primarykey ObjectId
-func NewObjectIdPrimaryKey(name string,columnNames []string) *PrimaryKey {
+func NewObjectIdPrimaryKey(name string, columnNames []string) *PrimaryKey {
 	return &PrimaryKey{
-		Name: name,
-		ColumnNames: columnNames,
+		Name:            name,
+		ColumnNames:     columnNames,
 		IdGeneratorType: IdGeneratorTypeObjectId,
 	}
 }
@@ -317,13 +320,12 @@ func NewObjectIdPrimaryKey(name string,columnNames []string) *PrimaryKey {
 type MetaIndex struct {
 }
 type RelationShip struct {
-	Name         string
-	Type         RelationShipType
-	Column  string
-	RefTable     string
-	RefColumn 	string
+	Name      string
+	Type      RelationShipType
+	Column    string
+	RefTable  string
+	RefColumn string
 }
-
 
 const (
 	RelationShipTypeUnknown RelationShipType = iota
@@ -364,20 +366,20 @@ func ParseRelationShipType(i int8) RelationShipType {
 	}
 }
 
- 
 func NilObjectID() ID {
 	return ID(primitive.NilObjectID)
 }
 func (id ID) String() string {
-	
+
 	return primitive.ObjectID(id).Hex()
 }
 func (id ID) ToObjectId() primitive.ObjectID {
 	return primitive.ObjectID(id)
 }
+
 //toID
 func ParseID(id interface{}) ID {
-	switch id:=id.(type) {
+	switch id := id.(type) {
 	case string:
 		objID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
@@ -392,9 +394,9 @@ func ParseID(id interface{}) ID {
 }
 
 type Attribute struct {
-	Name string
-	Type AttributeType
-	Value interface{}
+	Name     string
+	Type     AttributeType
+	Value    interface{}
 	DataType DataType
 }
 
@@ -403,24 +405,21 @@ const (
 	AttributeTypeInputType
 	AttributeTypeNormal
 )
+
 type Dictionary struct {
-	Id            primitive.ObjectID `bson:"_id,omitempty"`
-	Name          string
-	Group 	   	  string
-	DataType	  DataType
-	IsArray		  bool
-	Value interface{}
-	Description   string
-	Tracker
+	Id          primitive.ObjectID `bson:"_id,omitempty"`
+	Name        string
+	Group       string
+	DataType    DataType
+	IsArray     bool
+	Value       interface{}
+	Description string
+	Track
 }
 
-type Tracker struct {
-	//createAt
-	CreateAt time.Time
-	//updateAt
-	UpdateAt time.Time
-	//createBy
-	CreateBy *primitive.ObjectID
-	//updateBy
-	UpdateBy *primitive.ObjectID
+type Track struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	CreatedBy *ID
+	UpdatedBy *ID
 }

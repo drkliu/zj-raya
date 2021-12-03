@@ -91,8 +91,6 @@ func (r *repository) InsertManyMetaTables(tables []*MetaTable) ([]*ID, error) {
 	//convert to bson.D
 	var bsonTables []interface{}
 	for _, table := range tables {
-		table.CreateAt = time.Now()
-		table.UpdateAt = time.Now()
 		bsonTables = append(bsonTables, table)
 	}
 	result, err := coll.InsertMany(context.TODO(), bsonTables)
@@ -231,8 +229,6 @@ func (r *repository) InsertMany(table *MetaTable, values []*DataObject) ([]*ID, 
 	//convert to bson.D
 	var bsonValues []interface{}
 	for _, value := range values {
-		(*value).Put("createAt", time.Now())
-		(*value).Put("updateAt", time.Now())
 		bsonValues = append(bsonValues, value)
 	}
 	result, err := coll.InsertMany(context.TODO(), bsonValues)
